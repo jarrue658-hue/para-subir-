@@ -2,14 +2,21 @@ require('dotenv').config();
 const express = require("express");
 const nodemailer = require("nodemailer");
 const cors = require("cors");
+const path = require("path"); // 1. Agregamos este módulo
 
 const app = express();
 
 // Middlewares
 app.use(cors());
 app.use(express.json());
-// Sirve los archivos de la carpeta public (soluciona el "Cannot GET /")
-app.use(express.static("public")); 
+
+// 2. USAR RUTA ABSOLUTA: Esto soluciona definitivamente el "Cannot GET /"
+app.use(express.static(path.join(__dirname, "public"))); 
+
+// Ruta para forzar la carga del index.html
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
 
 // Configuración del transporte de correo
 const transporter = nodemailer.createTransport({
@@ -24,7 +31,6 @@ app.post("/enviar-reporte", async (req, res) => {
   const { nombre, email, asunto, mensaje } = req.body;
 
   try {
-    // 1. Correo para ti (notificación)
     await transporter.sendMail({
       from: `"Sistema" <${process.env.EMAIL_USER}>`,
       to: process.env.EMAIL_USER,
@@ -37,7 +43,6 @@ app.post("/enviar-reporte", async (req, res) => {
       `
     });
 
-    // 2. Correo para el usuario (confirmación)
     await transporter.sendMail({
       from: `"Soporte" <${process.env.EMAIL_USER}>`,
       to: email,
@@ -53,8 +58,9 @@ app.post("/enviar-reporte", async (req, res) => {
   }
 });
 
-// MODIFICACIÓN CLAVE PARA RENDER:
-// Reemplaza tu app.listen(3000...) por este:
+// 3. EXPORTAR PARA VERCEL: Esto es vital para que reconozca el servidor
+module.exports = app;
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor activo en el puerto ${PORT}`);
